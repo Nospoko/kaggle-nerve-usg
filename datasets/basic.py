@@ -63,6 +63,12 @@ def masked_records():
 
     return masked
 
+def radians2compass(rad):
+    """ Change continuous angle into discrete directions """
+    out = rad * 8 / (2 * np.pi)
+
+    return np.floor(out)
+
 def chop_image(path):
     """ Dissect single record into easier to process tiles """
     # Load data
@@ -77,20 +83,42 @@ def chop_image(path):
     tile_width = 170
     half = tile_width/2
 
-    # FIXME as a test just take some middlish point
-    new_y, new_x = 122, 160
+    dataset = []
+    # Sample image randomly
+    howmany = 500
+    x_points = np.random.randint(half, mask.shape[0] - half, howmany)
+    y_points = np.random.randint(half, mask.shape[1] - half, howmany)
+    for new_y, new_x in zip(y_points, x_points):
+	# Get spans
+	x_left, x_right = new_x - half, new_x + half
+	y_left, y_right = new_y - half, new_y + half
 
-    # Get spans
-    x_left, x_right = new_x - half, new_x + half
-    y_left, y_right = new_y - half, new_y + half
+	# Get angle?
+	dx = nerve_x - new_x
+	dy = nerve_y - new_y
 
-    # Get angle?
-    dx = nerve_x - new_x
-    dy = nerve_y - new_y
+	# TODO Just make sure the same transformation is used throughout
+	phi = np.arctan2(dx, dy)%(np.pi*2)
+	# +4 compensates for the first 3 labels
+	label = radians2compass(phi) + 0
 
-    print dx, dy
+	# FIXME Test that later, begin with just the angles
+	# If nerve is inside the view label with section numbber (1-4? 1-9?)
+	# if x_left < nerve_x < x_right and y_left < nerve_y < y_right:
+	    # x_on_left = abs(x_left-nerve_x) > abs(x_right-nerve_x)
+	    # y_on_left = abs(y_left-nerve_y) > abs(y_right-nerve_y)
+	    # if x_on_left and y_on_left:
+	    #     label = 0
+	    # if not x_on_left and y_on_left:
+	    #     label = 1
+	    # if x_on_left and not y_on_left:
+	    #     label = 2
+	    # if not x_on_left and not y_on_left:
+	    #     label = 3
+	    # print 'nerve in view!, at spot: ', label
+	# else:
+	    # If nerve is out of the view label it 
+	    # with angle point at it (more or less)
+	dataset.append((label, img[y_left : y_right, x_left : x_right]))
 
-    # dafuq, which way is that
-    phi = np.arctan2(dx, dy)%(np.pi*2)
-
-    return phi, mask[y_left : y_right, x_left : x_right]
+    return dataset
