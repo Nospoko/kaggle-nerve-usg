@@ -85,9 +85,9 @@ def chop_image(path):
 
     dataset = []
     # Sample image randomly
-    howmany = 500
-    x_points = np.random.randint(half, mask.shape[0] - half, howmany)
-    y_points = np.random.randint(half, mask.shape[1] - half, howmany)
+    howmany = 50000
+    x_points = np.random.randint(half, mask.shape[1] - half, howmany)
+    y_points = np.random.randint(half, mask.shape[0] - half, howmany)
     for new_y, new_x in zip(y_points, x_points):
 	# Get spans
 	x_left, x_right = new_x - half, new_x + half
