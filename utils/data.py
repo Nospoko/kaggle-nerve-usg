@@ -7,7 +7,7 @@ def get_mask_center(mask):
     contours, hierarchy = cv.findContours(thresh, 1, 2)
     ellipse = cv.fitEllipse(contours[0])
 
-    cx, cy = ellipse[0]
+    cy, cx = ellipse[0]
 
-    return cx, cy
+    return cy, cx
 

@@ -9,6 +9,7 @@
 import cv2 as cv
 import numpy as np
 from glob import glob
+from utils import data as ud
 
 def get_records():
     """ Read all avaiable patients """
@@ -61,3 +62,35 @@ def masked_records():
 	    masked.append(path)
 
     return masked
+
+def chop_image(path):
+    """ Dissect single record into easier to process tiles """
+    # Load data
+    img, mask = get_sample(path)
+
+    # Get nerve center
+    nerve_x, nerve_y = ud.get_mask_center(mask)
+
+    print 'Nerve coordinates: ({}, {})'.format(nerve_y, nerve_x)
+
+    # Prepare tiles (width was guessed)
+    tile_width = 170
+    half = tile_width/2
+
+    # FIXME as a test just take some middlish point
+    new_y, new_x = 122, 160
+
+    # Get spans
+    x_left, x_right = new_x - half, new_x + half
+    y_left, y_right = new_y - half, new_y + half
+
+    # Get angle?
+    dx = nerve_x - new_x
+    dy = nerve_y - new_y
+
+    print dx, dy
+
+    # dafuq, which way is that
+    phi = np.arctan2(dx, dy)%(np.pi*2)
+
+    return phi, mask[y_left : y_right, x_left : x_right]
