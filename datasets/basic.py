@@ -85,7 +85,7 @@ def chop_image(path):
 
     dataset = []
     # Sample image randomly
-    howmany = 50000
+    howmany = 500
     x_points = np.random.randint(half, mask.shape[1] - half, howmany)
     y_points = np.random.randint(half, mask.shape[0] - half, howmany)
     for new_y, new_x in zip(y_points, x_points):
@@ -102,6 +102,12 @@ def chop_image(path):
 	# +4 compensates for the first 3 labels
 	label = radians2compass(phi) + 0
 
+	dataset.append((label, img[y_left : y_right, x_left : x_right]))
+
+    return dataset
+
+def make_location_label(a, b, c, d):
+    """ Nerve pos and window center into nerve location transformation """
 	# FIXME Test that later, begin with just the angles
 	# If nerve is inside the view label with section numbber (1-4? 1-9?)
 	# if x_left < nerve_x < x_right and y_left < nerve_y < y_right:
@@ -119,6 +125,6 @@ def chop_image(path):
 	# else:
 	    # If nerve is out of the view label it 
 	    # with angle point at it (more or less)
-	dataset.append((label, img[y_left : y_right, x_left : x_right]))
+            
+    pass
 
-    return dataset
