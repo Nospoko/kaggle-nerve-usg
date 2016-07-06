@@ -120,7 +120,7 @@ def chop_image(path, howmany = 10000):
 	dataset.append((signal, label))
 
 	# Change image a little every so often
-	if (it+1) % 5000 == 0:
+	if (it+1) % 50 == 0:
 	    picture = ud.twist_image(img)
 
     return dataset
@@ -216,7 +216,7 @@ def make_huge_hdf_set():
     howmany = len(paths) * chunksize
     print 'Making {} fake signal samples'.format(howmany)
 
-    filepath = 'data/augmented.storage'
+    filepath = 'data/augmented_b.storage'
 
     with h5py.File(filepath, 'w') as db:
 	# Prepare expandable datasets for signals and labels
