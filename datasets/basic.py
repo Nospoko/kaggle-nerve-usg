@@ -77,7 +77,7 @@ def radians2compass(rad):
 
     return one_hot
 
-def chop_image(path, howmany = 10000):
+def chop_image(path, howmany = 10001):
     """ Dissect single record into easier to process tiles """
     # Load data
     img, mask = get_sample(path)
