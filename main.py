@@ -14,7 +14,7 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.conv2d(x, W, strides=[1, 2, 2, 1], padding='SAME')
 
 def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
@@ -23,30 +23,74 @@ def max_pool_2x2(x):
 if __name__ == '__main__':
 
     # Get some data
-    masked = db.masked_records()
-    miniset = db.chop_image(masked[0], 20)
-    signal = miniset[0][0]
+    masked          = db.masked_records()
+    miniset         = db.chop_image(masked[0], 20)
+    signal          = miniset[0][0]
+    signal_shape    = 170**2
+    n_classes       = 16
 
     # Prepare tensorflow signal holders
-    x = tf.placeholder(tf.float32, shape=[None, 170**2])
-    x_image = tf.reshape(x, [-1, 170, 170, 1]) 
+    x = tf.placeholder(tf.float32, shape=[None, signal_shape])
 
-    # and conv filters
-    W_conv1 = weight_variable([5, 5, 1, 9]) 
+    # Start with fully connected layer to shrink the image
+    W_aa = weight_variable([signal_shape, 100**2])
+    b_aa = bias_variable([100**2])
 
-    # Convolve
-    first = conv2d(x_image, W_conv1)
+    layer_aa = tf.matmul(x, W_aa)
+    layer_aa = tf.add(layer_aa, b_aa)
+    layer_aa = tf.nn.sigmoid(layer_aa)
+
+    # Extract 16 features convolutionally
+    x_image = tf.reshape(layer_aa, [-1, 100, 100, 1]) 
+    W_conv1 = weight_variable([5, 5, 1, 16]) 
+    b_conv1 = bias_variable([16])
+
+    # Image becomes 50x50
+    layer_bb = conv2d(x_image, W_conv1)
+    layer_bb = tf.nn.relu(layer_bb + b_conv1)
+
+    # Another fully connected layer
+    x_flat = tf.reshape(layer_bb, [-1, 16*50*50])
+    W_bb = weight_variable([16*50*50, 20*20])
+    b_bb = bias_variable([20*20])
+
+    # Image is now 20x20
+    layer_cc = tf.matmul(x_flat, W_bb)
+    layer_cc = tf.add(layer_cc, b_bb)
+    layer_cc = tf.nn.sigmoid(layer_cc)
+
+    # Try to extract 4 more features
+    x_image_cc = tf.reshape(layer_cc, [-1, 20, 20, 1])
+    W_conv2 = weight_variable([5, 5, 1, 4])
+    b_conv2 = bias_variable([4])
+
+    # Image becomes 10x10
+    layer_dd = conv2d(x_image_cc, W_conv2)
+    layer_dd = tf.nn.relu(layer_dd + b_conv2)
+
+    # Final fully connected layer!
+    x_flat_ee = tf.reshape(layer_dd, [-1, 4*10*10])
+    W_ee = weight_variable([4*10*10, 256])
+    b_ee = bias_variable([256])
+
+    layer_ee = tf.matmul(x_flat_ee, W_ee)
+    layer_ee = tf.add(layer_ee, b_ee)
+    layer_ee = tf.nn.sigmoid(layer_ee)
+
+    # Readout
+    W_ff = weight_variable([256, n_classes])
+    b_ff = bias_variable([n_classes])
+
+    layer_ff = tf.matmul(layer_ee, W_ff)
+    layer_ff = tf.add(layer_ff, b_ff)
+    layer_ff = tf.nn.sigmoid(layer_ff)
 
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
         fd = { x : [signal] }
-        scores = sess.run(first, feed_dict = fd)
+        scores = sess.run(layer_ff, feed_dict = fd)
 
-    # Reshape scores into a list of images
-    final = []
-    for it in range(9):
-        final.append(scores[0, :, :, it])
-
-    ud.show_nine(final)
+    print scores.shape
+    plt.plot(scores[0])
     plt.savefig('tmp/nine.png')
     plt.clf()
