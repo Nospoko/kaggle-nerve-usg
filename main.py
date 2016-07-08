@@ -23,14 +23,13 @@ def max_pool_2x2(x):
 if __name__ == '__main__':
 
     # Get some data
-    masked          = db.masked_records()
-    miniset         = db.chop_image(masked[0], 20)
-    signal          = miniset[0][0]
+    dataset         = ud.HdfDataset('data/augmented_b.storage')
     signal_shape    = 170**2
-    n_classes       = 16
+    n_classes       = 12
 
     # Prepare tensorflow signal holders
     x = tf.placeholder(tf.float32, shape=[None, signal_shape])
+    Y = tf.placeholder("float", [None, n_classes])
 
     # Start with fully connected layer to shrink the image
     W_aa = weight_variable([signal_shape, 100**2])
@@ -85,12 +84,30 @@ if __name__ == '__main__':
     layer_ff = tf.add(layer_ff, b_ff)
     layer_ff = tf.nn.sigmoid(layer_ff)
 
+    # What to minimize
+    cost = tf.reduce_mean(tf.pow(Y - layer_ff, 2))
+    optimizer = tf.train.AdamOptimizer(0.01).minimize(cost)
+
+    learning = []
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
-        fd = { x : [signal] }
+        # Work hard
+        for it in range(2000):
+            si, la = dataset.next_batch(16)
+            fd = { x : si, Y : la }
+            _, c = sess.run([optimizer, cost], feed_dict = fd)
+
+            learning.append(c)
+            print 'cost {} at {}'.format(c, it)
+
+        fd = { x : [si[-1]] }
         scores = sess.run(layer_ff, feed_dict = fd)
 
     print scores.shape
-    plt.plot(scores[0])
+    plt.plot(scores)
     plt.savefig('tmp/nine.png')
+    plt.clf()
+
+    plt.plot(learning)
+    plt.savefig('tmp/learning.png')
     plt.clf()

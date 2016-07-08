@@ -210,7 +210,7 @@ def make_huge_hdf_set():
     # Get interesting images (label rather properly)
     paths = masked_records()
     # Decide how many tile You want to generate from one image
-    chunksize = 500
+    chunksize = 100
 
     # Calculate number of samples about to be generated
     howmany = len(paths) * chunksize
