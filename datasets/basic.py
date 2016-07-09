@@ -11,10 +11,11 @@ import cv2 as cv
 import numpy as np
 from glob import glob
 from utils import data as ud
+from matplotlib import pyplot as plt
 
 def label_size():
     """ Helper """
-    return 6
+    return 16
 
 def get_records():
     """ Read all avaiable patients """
@@ -64,9 +65,36 @@ def masked_records():
     for path in paths:
 	mask = get_mask(path)
 	if mask.max() > 0.01:
-	    masked.append(path)
+            masked.append(path)
 
     return masked
+
+def get_angle(label):
+    """ Change label into actual angle """
+    howmany = label_size()
+    rad = 2 * np.pi * label / howmany
+
+    return rad
+
+def label_test(path):
+    """ Check if directions are properly set """
+    miniset = chop_image(path, 10)
+    img = miniset[0][0].reshape((170, 170))
+    theta = get_angle(miniset[0][1].argmax())
+
+    # Draw an arrow from the (100, 100) point
+    pta = tuple(miniset[0][2])
+    kx = int(round(50 * np.sin(theta)))
+    ky = int(round(50 * np.cos(theta)))
+    ptb = (pta[0] + kx, pta[1] + ky)
+
+    # Draw on the real mask
+    mask = get_mask(path)
+
+    cv.arrowedLine(mask, pta, ptb, (255, 25, 100), 1)
+    plt.imshow(mask)
+    plt.show()
+
 
 def make_label(rad):
     """ Change continuous angle into discrete directions """
@@ -77,7 +105,7 @@ def make_label(rad):
     label = int(np.floor(label))
 
     one_hot = np.zeros(howmany)
-    one_hot[label] = 1
+    one_hot[label] = 1.0
 
     return one_hot
 
@@ -121,11 +149,11 @@ def chop_image(path, howmany = 100):
 	signal = picture[y_left : y_right, x_left : x_right]
 	signal = signal.reshape((-1, ))
 
-	dataset.append((signal, label))
+	dataset.append((signal, label, [new_x, new_y]))
 
 	# Change image a little every so often
 	if (it+1) % 50 == 0:
-	    picture = ud.twist_image(img)
+            picture = ud.twist_image(img)
 
     return dataset
 
@@ -136,7 +164,7 @@ def prepare_data():
 
     # Prepare container for the full dataset
     dataset = []
-    
+
     # FIXME Do not run this for every path or crash
     for path in paths[:10]:
 	dataset += chop_image(path)
