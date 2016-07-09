@@ -12,6 +12,10 @@ import numpy as np
 from glob import glob
 from utils import data as ud
 
+def label_size():
+    """ Helper """
+    return 6
+
 def get_records():
     """ Read all avaiable patients """
     # There are 2 files per record
@@ -64,11 +68,11 @@ def masked_records():
 
     return masked
 
-def radians2compass(rad):
+def make_label(rad):
     """ Change continuous angle into discrete directions """
     # Let's say that there are 12 directions in which we
     # should be looking for the nerve
-    howmany = 12
+    howmany = label_size()
     label = rad * howmany/ (2 * np.pi)
     label = int(np.floor(label))
 
@@ -97,8 +101,8 @@ def chop_image(path, howmany = 100):
     picture = img[:]
     # Sample image randomly
     for it in range(howmany):
-	new_x = np.random.randint(half, mask.shape[1] - half)
-	new_y = np.random.randint(half, mask.shape[0] - half)
+	new_x = np.random.randint(2*half, mask.shape[1] - 2*half)
+	new_y = np.random.randint(2*half, mask.shape[0] - 2*half)
 
 	# Get spans
 	x_left, x_right = new_x - half, new_x + half
@@ -111,7 +115,7 @@ def chop_image(path, howmany = 100):
 	# TODO Just make sure the same transformation is used throughout
 	phi = np.arctan2(dx, dy)%(np.pi*2)
 	# +4 compensates for the first 3 labels
-	label = radians2compass(phi) + 0
+	label = make_label(phi) + 0
 
 	# Change into a vector
 	signal = picture[y_left : y_right, x_left : x_right]
@@ -210,7 +214,7 @@ def make_huge_hdf_set():
     # Get interesting images (label rather properly)
     paths = masked_records()
     # Decide how many tile You want to generate from one image
-    chunksize = 100
+    chunksize = 150
 
     # Calculate number of samples about to be generated
     howmany = len(paths) * chunksize
@@ -226,7 +230,7 @@ def make_huge_hdf_set():
 				   maxshape = (None, sigsize))
 
 	# FIXME This must be negotiated with several places
-	labsize = 12
+	labsize = label_size()
 	labset = db.create_dataset('training/labels',
 				   shape = (howmany, labsize), 
 				   maxshape = (None, labsize))

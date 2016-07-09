@@ -25,11 +25,12 @@ if __name__ == '__main__':
     # Get some data
     dataset         = ud.HdfDataset('data/augmented_b.storage')
     signal_shape    = 170**2
-    n_classes       = 12
+    n_classes       = db.label_size()
 
     # Prepare tensorflow signal holders
     x = tf.placeholder(tf.float32, shape=[None, signal_shape])
     Y = tf.placeholder("float", [None, n_classes])
+    keep_prob = tf.placeholder(tf.float32)
 
     # Start with fully connected layer to shrink the image
     W_aa = weight_variable([signal_shape, 100**2])
@@ -58,23 +59,25 @@ if __name__ == '__main__':
     layer_cc = tf.add(layer_cc, b_bb)
     layer_cc = tf.nn.sigmoid(layer_cc)
 
-    # Try to extract 4 more features
+    # Try to extract 64 more features
     x_image_cc = tf.reshape(layer_cc, [-1, 20, 20, 1])
-    W_conv2 = weight_variable([5, 5, 1, 4])
-    b_conv2 = bias_variable([4])
+    W_conv2 = weight_variable([5, 5, 1, 64])
+    b_conv2 = bias_variable([64])
 
     # Image becomes 10x10
     layer_dd = conv2d(x_image_cc, W_conv2)
     layer_dd = tf.nn.relu(layer_dd + b_conv2)
 
     # Final fully connected layer!
-    x_flat_ee = tf.reshape(layer_dd, [-1, 4*10*10])
-    W_ee = weight_variable([4*10*10, 256])
+    x_flat_ee = tf.reshape(layer_dd, [-1, 64*10*10])
+    W_ee = weight_variable([64*10*10, 256])
     b_ee = bias_variable([256])
 
     layer_ee = tf.matmul(x_flat_ee, W_ee)
     layer_ee = tf.add(layer_ee, b_ee)
     layer_ee = tf.nn.sigmoid(layer_ee)
+
+    layer_ee = tf.nn.dropout(layer_ee, keep_prob)
 
     # Readout
     W_ff = weight_variable([256, n_classes])
@@ -86,28 +89,27 @@ if __name__ == '__main__':
 
     # What to minimize
     cost = tf.reduce_mean(tf.pow(Y - layer_ff, 2))
-    optimizer = tf.train.AdamOptimizer(0.01).minimize(cost)
+    optimizer = tf.train.AdamOptimizer(0.0001).minimize(cost)
 
     learning = []
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
         # Work hard
         for it in range(2000):
-            si, la = dataset.next_batch(16)
-            fd = { x : si, Y : la }
+            si, la = dataset.next_batch(512)
+            fd = { x : si, Y : la, keep_prob : 0.95 }
             _, c = sess.run([optimizer, cost], feed_dict = fd)
 
             learning.append(c)
             print 'cost {} at {}'.format(c, it)
+            plt.plot(learning, 'c-o')
+            plt.savefig('tmp/learning.png')
+            plt.clf()
 
-        fd = { x : [si[-1]] }
+        fd = { x : [si[-1]], keep_prob : 1.0 }
         scores = sess.run(layer_ff, feed_dict = fd)
 
     print scores.shape
     plt.plot(scores)
     plt.savefig('tmp/nine.png')
-    plt.clf()
-
-    plt.plot(learning)
-    plt.savefig('tmp/learning.png')
     plt.clf()
